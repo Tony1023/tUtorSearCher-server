@@ -1,7 +1,8 @@
-package edu.usc.csci310.tUtorSearCher.server;
+package edu.usc.csci310.team16.tutorsearcher.server;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
 
 @Configuration

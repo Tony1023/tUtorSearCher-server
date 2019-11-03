@@ -1,3 +1,6 @@
+# db credentials
+Credentials.java
+
 *.iml
 .gradle
 .idea/
