@@ -12,18 +12,20 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        String token = request.getHeader("access-token");
-        String idStr = request.getHeader("user-id");
-        if (token == null || idStr == null) {
-            response.setStatus(403);
-            return false;
-        }
-        Integer id = Integer.valueOf(idStr);
-        if (dao.validateUserToken(id, token)) {
-            return true;
-        }
-        response.setStatus(403);
-        return false;
+        return true;
+        // TODO: bring these back
+//        String token = request.getHeader("access-token");
+//        String idStr = request.getHeader("user-id");
+//        if (token == null || idStr == null) {
+//            response.setStatus(403);
+//            return false;
+//        }
+//        Integer id = Integer.valueOf(idStr);
+//        if (dao.validateUserToken(id, token)) {
+//            return true;
+//        }
+//        response.setStatus(403);
+//        return false;
     }
 
     @Override

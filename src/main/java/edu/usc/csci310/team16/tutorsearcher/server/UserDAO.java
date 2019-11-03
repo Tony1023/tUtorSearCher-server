@@ -1,5 +1,6 @@
 package edu.usc.csci310.team16.tutorsearcher.server;
 
+import javax.xml.transform.Result;
 import java.sql.*;
 import java.util.*;
 import java.util.Date;
@@ -26,9 +27,9 @@ public class UserDAO {
             idQuery = connection.prepareStatement("SELECT * FROM Users WHERE id=?");
             emailQuery = connection.prepareStatement("SELECT * FROM Users WHERE email=?");
             availabilityQuery = connection.prepareStatement("SELECT slot_num FROM Availability WHERE user_id=? ");
-            courseQuery = connection.prepareStatement("SELECT c.dep, c.num FROM Users u, Courses c, UserCourses uc " +
+            courseQuery = connection.prepareStatement("SELECT c.course_id FROM Users u, Courses c, UserCourses uc " +
                     "WHERE u.id=? AND u.id=uc.user_id AND c.id=uc.course_id");
-            tutorClassQuery = connection.prepareStatement("SELECT c.dep, c.num FROM Users u, Courses c, CourseOffered uc " +
+            tutorClassQuery = connection.prepareStatement("SELECT c.course_id FROM Users u, Courses c, CourseOffered uc " +
                     "WHERE u.id=? AND u.id=uc.user_id AND c.id=uc.course_id");
             avgRatingQuery = connection.prepareStatement("SELECT avg(ifnull(r.rating, -1)) FROM Users u, Ratings r " +
                     "WHERE u.id=? AND r.tutor_id=u.id");
@@ -40,6 +41,45 @@ public class UserDAO {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+
+    public List<UserProfile> findTutors(Integer id, String course, List<Integer> slots) {
+        List<UserProfile> tutors = new LinkedList<>();
+        try {
+            ResultSet result;
+            StringBuilder query = new StringBuilder();
+            query.append("SELECT a.user_id, COUNT(a.slot_num) as overlap FROM Availability a, CourseOffered co, Courses c ");
+            query.append("WHERE a.user_id=co.user_id AND co.course_id=c.id AND a.slot_num IN ");
+            StringBuilder sb = new StringBuilder();
+            sb.append("(");
+            for (Integer slot: slots) {
+                sb.append(slot.toString());
+                sb.append(",");
+            }
+            sb.deleteCharAt(sb.length() - 1);
+            sb.append(")");
+            query.append(sb);
+            query.append(" AND c.course_id=\'").append(course).append("\'");
+            query.append(" GROUP BY a.user_id ORDER BY overlap DESC");
+            PreparedStatement st = MySQLConfig.getConnection().prepareStatement(query.toString());
+            result = st.executeQuery();
+            while (result.next()) {
+                tutors.add(findUserById(result.getInt(1)));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        for (UserProfile tutor: tutors) {
+            List<Integer> tutorSlots = tutor.getAvailability();
+            List<Integer> overlap = new LinkedList<>();
+            for (Integer slot: tutorSlots) {
+                if (slots.indexOf(slot) >= 0) {
+                    overlap.add(slot);
+                }
+            }
+            tutor.setAvailability(overlap);
+        }
+        return tutors;
     }
 
     public Double getRating(int tutorId, int tuteeId) {
@@ -196,7 +236,7 @@ public class UserDAO {
                     ResultSet result = courseQuery.executeQuery();
                     List<String> courses = new LinkedList<>();
                     while (result.next()) {
-                        courses.add(result.getString(1) + result.getInt(2));
+                        courses.add(result.getString(1));
                     }
                     user.setCoursesTaken(courses);
                 }
@@ -205,9 +245,9 @@ public class UserDAO {
                     ResultSet result = tutorClassQuery.executeQuery();
                     List<String> courses = new LinkedList<>();
                     while (result.next()) {
-                        courses.add(result.getString(1) + result.getInt(2));
+                        courses.add(result.getString(1));
                     }
-                    user.setCoursesTaken(courses);
+                    user.setTutorClasses(courses);
                 }
                 user.setRating(getAvgRating(user.getId()));
             }

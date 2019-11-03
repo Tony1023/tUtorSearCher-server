@@ -60,9 +60,7 @@ public class Login {
 
     @PostMapping(value = "validateToken",
             consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-    public Object validate(@RequestBody MultiValueMap<String, String> formData) {
-        Integer id = Integer.valueOf(formData.get("id").get(0));
-        String token = formData.get("token").get(0);
+    public Object validate(@RequestParam(value="id") Integer id, @RequestParam(value="token") String token) {
         if (!dao.validateUserToken(id, token)) {
             return "{}";
         }

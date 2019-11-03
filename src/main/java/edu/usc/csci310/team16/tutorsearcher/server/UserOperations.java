@@ -4,9 +4,14 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.http.HttpServletRequest;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+@SuppressWarnings("unchecked")
 @RestController
 @RequestMapping("/user")
 public class UserOperations {
@@ -14,53 +19,79 @@ public class UserOperations {
     private UserDAO dao = new UserDAO();
 
     @PostMapping(value = "updateProfileImage",
-            consumes = MediaType.IMAGE_JPEG_VALUE
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
-    public String receiveImage(MultipartFile image) {
-
+    public String receiveImage(HttpServletRequest req, MultipartFile image) {
+        try {
+            File file = new File("/Users/TonyLyu", "upload.png");
+            // TODO: get a tomcat managed path
+            if (file.createNewFile()) {
+                image.transferTo(file);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         return "placeholder";
     }
 
     @PostMapping(value = "cancelImageUpdate")
-    public String cancelUpload() {
+    public String cancelUpload(HttpServletRequest req) {
+        // Delete id-temp.jpg file
         return "placeholder";
     }
 
     @PostMapping(value = "updateProfile")
     public String updateProfile(@RequestBody Map<String, String> json) {
+        // Change id-temp.jpg file to id.jpg
         return "placeholder";
     }
 
-    @GetMapping(value = "searchTutor")
-    public List<UserProfile> searchTutor(@RequestBody Map<String, Object> json) {
+    @GetMapping(value = "getProfileImage",
+        produces = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public MultipartFile getImage(HttpServletRequest req) {
+
         return null;
     }
 
+    @GetMapping(value = "searchTutor")
+    public List<UserProfile> searchTutor(HttpServletRequest req, @RequestBody Map<String, Object> json) {
+        String idStr = req.getHeader("user-id");
+        if (idStr == null) {
+            return new ArrayList<>();
+        }
+        Integer id = Integer.valueOf(idStr);
+        String course = (String) json.get("class");
+        List<Integer> slots = (List<Integer>) json.get("availability");
+        return dao.findTutors(id, course, slots);
+    }
+
     @PostMapping(value = "sendRequest")
-    public String sendRequest(@RequestBody Map<String, Object> json) {
+    public String sendRequest(HttpServletRequest req, @RequestBody Map<String, Object> json) {
         
         return "success";
     }
 
     @GetMapping(value = "getNotifications")
-    public Object getNotifications() {
+    public Object getNotifications(HttpServletRequest req) {
 
         return null;
     }
 
     @PostMapping(value = "acceptRequest")
-    public String acceptRequest() {
+    public String acceptRequest(HttpServletRequest req, @RequestBody Integer requestId) {
+
         return "success";
     }
 
     @PostMapping(value = "rejectRequest")
-    public String rejectRequest() {
+    public String rejectRequest(HttpServletRequest req, @RequestBody Integer requestId) {
         return "success";
     }
 
     @GetMapping(value = "getTutors")
-    public Object getTutors() {
-        return "tutors!";
+    public List<UserProfile> getTutors() {
+        return null;
     }
 
     @GetMapping(value = "getRating")
