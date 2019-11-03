@@ -18,6 +18,7 @@ public class UserDAO {
     private PreparedStatement registerCommand = null;
     private PreparedStatement addTokenCommand = null;
     private PreparedStatement ratingQuery = null;
+    private PreparedStatement notificationsQuery = null;
     private final long validPeriod = 1 * 24 * 60 * 60 * 1000;
 
     public UserDAO() {
@@ -38,12 +39,17 @@ public class UserDAO {
             registerCommand = connection.prepareStatement("INSERT INTO Users(email, pass_hash) VALUE(?,?)");
             addTokenCommand = connection.prepareStatement("INSERT INTO AuthTokens(user_id, auth_token, date_added, date_active) VALUE(?,?,?,?)");
             ratingQuery = connection.prepareStatement("SELECT rating FROM Ratings WHERE tutor_id=? AND tutee_id=?");
+//            notificationsQuery = connection.prepareStatement("SELECT ")
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
-    public List<UserProfile> findTutors(Integer id, String course, List<Integer> slots) {
+    public List<Map<String, Object>> getNotifications(Integer id) {
+        return null;
+    }
+
+    public List<UserProfile> findTutors(String course, List<Integer> slots) {
         List<UserProfile> tutors = new LinkedList<>();
         try {
             ResultSet result;

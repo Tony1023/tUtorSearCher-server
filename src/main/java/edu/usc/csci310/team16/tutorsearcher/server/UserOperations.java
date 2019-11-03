@@ -56,14 +56,9 @@ public class UserOperations {
 
     @GetMapping(value = "searchTutor")
     public List<UserProfile> searchTutor(HttpServletRequest req, @RequestBody Map<String, Object> json) {
-        String idStr = req.getHeader("user-id");
-        if (idStr == null) {
-            return new ArrayList<>();
-        }
-        Integer id = Integer.valueOf(idStr);
         String course = (String) json.get("class");
         List<Integer> slots = (List<Integer>) json.get("availability");
-        return dao.findTutors(id, course, slots);
+        return dao.findTutors(course, slots);
     }
 
     @PostMapping(value = "sendRequest")
@@ -74,8 +69,12 @@ public class UserOperations {
 
     @GetMapping(value = "getNotifications")
     public Object getNotifications(HttpServletRequest req) {
-
-        return null;
+        String idStr = req.getHeader("user-id");
+        if (idStr == null) {
+            return null;
+        }
+        Integer id = Integer.valueOf(idStr);
+        return dao.getNotifications(id);
     }
 
     @PostMapping(value = "acceptRequest")
@@ -91,6 +90,7 @@ public class UserOperations {
 
     @GetMapping(value = "getTutors")
     public List<UserProfile> getTutors() {
+
         return null;
     }
 
