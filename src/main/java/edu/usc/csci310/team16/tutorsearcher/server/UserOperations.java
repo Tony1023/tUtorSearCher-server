@@ -139,18 +139,15 @@ public class UserOperations {
         return dao.getTutors(id);
     }
 
-    @GetMapping(value = "getRating")
-    public Double getRating(@RequestBody Map<String, Integer> json) {
-        Integer tutorId = json.get("tutor_id");
-        Integer tuteeId = json.get("tutee_id");
+    @PostMapping(value = "getRating",
+            consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    public Double getRating(@RequestParam(value="tutor_id") Integer tutorId, @RequestParam(value="tutee_id") Integer tuteeId) {
         return dao.getRating(tutorId, tuteeId); // TODO: verify that returning null works
     }
 
-    @PostMapping(value = "rateTutor")
-    public String rateTutor(@RequestBody Map<String, Object> json) {
-        Integer tutorId = (Integer) json.get("tutor_id");
-        Integer tuteeId = (Integer) json.get("tutee_id");
-        Double rating = (Double) json.get("rating");
+    @PostMapping(value = "rateTutor",
+            consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    public String rateTutor(@RequestParam(value="tutor_id") Integer tutorId, @RequestParam(value="tutee_id") Integer tuteeId, @RequestParam(value="rating") Double rating) {
         dao.updateRating(tutorId, tuteeId, rating);
         return "success";
     }
