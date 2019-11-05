@@ -1,5 +1,6 @@
 package edu.usc.csci310.team16.tutorsearcher.server;
 
+import jdk.nashorn.internal.parser.JSONParser;
 import org.apache.commons.io.IOUtils;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -74,7 +75,7 @@ public class UserOperations {
         return null;
     }
 
-    @GetMapping(value = "searchTutor")
+    @PostMapping(value = "searchTutor")
     public List<UserProfile> searchTutor(HttpServletRequest req, @RequestBody Map<String, Object> json) {
         String course = (String) json.get("class");
         List<Integer> slots = (List<Integer>) json.get("availability");
