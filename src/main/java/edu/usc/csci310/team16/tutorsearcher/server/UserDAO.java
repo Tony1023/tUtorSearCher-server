@@ -1,11 +1,13 @@
 package edu.usc.csci310.team16.tutorsearcher.server;
 
-import javax.xml.transform.Result;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.sql.*;
 import java.util.*;
 import java.util.Date;
 
-public class UserDAO {
+@Transactional
+class UserDAO {
 
     private PreparedStatement credentialsQuery = null;
     private PreparedStatement idQuery = null;
@@ -19,18 +21,29 @@ public class UserDAO {
     private PreparedStatement addTokenCommand = null;
     private PreparedStatement ratingQuery = null;
     private PreparedStatement notificationsQuery = null;
+    private PreparedStatement addRequestCommand = null;
+    private PreparedStatement getRequestQuery = null;
+    private PreparedStatement getRequestByIdQuery = null;
+    private PreparedStatement getTutorIdsQuery = null;
+    private PreparedStatement addNotificationCommand = null;
+    private PreparedStatement addRequestOverlapCommand = null;
+    private PreparedStatement requestOverlapQuery = null;
+    private PreparedStatement acceptedRequestsForCourseQuery = null;
+    private PreparedStatement decideRequestCommand = null;
+    private PreparedStatement invalidateRequestCommand = null;
+    private PreparedStatement updateRatingCommand = null;
     private final long validPeriod = 1 * 24 * 60 * 60 * 1000;
 
-    public UserDAO() {
+    UserDAO() {
         try {
             Connection connection = MySQLConfig.getConnection();
             credentialsQuery = connection.prepareStatement("SELECT * FROM Users WHERE email=? AND pass_hash=? ");
             idQuery = connection.prepareStatement("SELECT * FROM Users WHERE id=?");
             emailQuery = connection.prepareStatement("SELECT * FROM Users WHERE email=?");
             availabilityQuery = connection.prepareStatement("SELECT slot_num FROM Availability WHERE user_id=? ");
-            courseQuery = connection.prepareStatement("SELECT c.course_id FROM Users u, Courses c, UserCourses uc " +
+            courseQuery = connection.prepareStatement("SELECT c.course_number FROM Users u, Courses c, UserCourses uc " +
                     "WHERE u.id=? AND u.id=uc.user_id AND c.id=uc.course_id");
-            tutorClassQuery = connection.prepareStatement("SELECT c.course_id FROM Users u, Courses c, CourseOffered uc " +
+            tutorClassQuery = connection.prepareStatement("SELECT c.course_number FROM Users u, Courses c, CourseOffered uc " +
                     "WHERE u.id=? AND u.id=uc.user_id AND c.id=uc.course_id");
             avgRatingQuery = connection.prepareStatement("SELECT avg(ifnull(r.rating, -1)) FROM Users u, Ratings r " +
                     "WHERE u.id=? AND r.tutor_id=u.id");
@@ -39,17 +52,251 @@ public class UserDAO {
             registerCommand = connection.prepareStatement("INSERT INTO Users(email, pass_hash) VALUE(?,?)");
             addTokenCommand = connection.prepareStatement("INSERT INTO AuthTokens(user_id, auth_token, date_added, date_active) VALUE(?,?,?,?)");
             ratingQuery = connection.prepareStatement("SELECT rating FROM Ratings WHERE tutor_id=? AND tutee_id=?");
-//            notificationsQuery = connection.prepareStatement("SELECT ")
+            notificationsQuery = connection.prepareStatement("SELECT n.id, n.req_id, r.req_status, n.receiver_type, n.sender_id, n.receiver_id FROM Requests r, Notifications n " +
+                    "WHERE r.id=n.req_id AND n.receiver_id=?" /*+ " AND n.pushed=0"*/);
+            addRequestCommand = connection.prepareStatement("INSERT INTO Requests(tutor_id, tutee_id, course_id) " +
+                    "SELECT ?, ?, c.id FROM Courses c WHERE c.course_number=?");
+            getRequestQuery = connection.prepareStatement("SELECT * FROM Requests r, Courses c WHERE r.course_id=c.id AND tutor_id=? AND tutee_id=? AND c.course_number=?");
+            getRequestByIdQuery = connection.prepareStatement("SELECT * FROM Requests WHERE id=?");
+            getTutorIdsQuery = connection.prepareStatement("SELECT tutor_id FROM Requests WHERE tutee_id=? AND req_status=1");
+            addNotificationCommand = connection.prepareStatement("INSERT INTO Notifications(req_id, sender_id, receiver_id, receiver_type) VALUES(?,?,?,?)");
+            addRequestOverlapCommand = connection.prepareStatement("INSERT INTO RequestOverlap(req_id, slot_num) VALUES(?,?)");
+            requestOverlapQuery = connection.prepareStatement("SELECT slot_num FROM RequestOverlap WHERE req_id=?");
+            acceptedRequestsForCourseQuery = connection.prepareStatement("SELECT id FROM Requests WHERE tutee_id=? AND req_status=1");
+            decideRequestCommand = connection.prepareStatement("UPDATE Requests SET req_status=? WHERE id=?");
+            invalidateRequestCommand = connection.prepareStatement("UPDATE Requests SET req_status=3 WHERE tutee_id=? AND course_id=? AND NOT id=?");
+            updateRatingCommand = connection.prepareStatement("INSERT INTO Ratings(tutor_id, tutee_id, rating) VALUES (?,?,?)");
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
-    public List<Map<String, Object>> getNotifications(Integer id) {
-        return null;
+    void updateRating(Integer tutor, Integer tutee, Double rating) {
+        try {
+            synchronized (updateRatingCommand) {
+                updateRatingCommand.setInt(1, tutor);
+                updateRatingCommand.setInt(2, tutee);
+                updateRatingCommand.setDouble(3, rating);
+                updateRatingCommand.execute();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
-    public List<UserProfile> findTutors(String course, List<Integer> slots) {
+    void acceptRequest(Integer id) {
+        try {
+            ResultSet result;
+            synchronized (decideRequestCommand) {
+                decideRequestCommand.setInt(1, 1);
+                decideRequestCommand.setInt(2, id);
+                decideRequestCommand.execute();
+            }
+            synchronized (getRequestByIdQuery) {
+                getRequestByIdQuery.setInt(1, id);
+                result = getRequestByIdQuery.executeQuery();
+            }
+            if (result.next()) {
+                synchronized (addNotificationCommand) {
+                    addNotificationCommand.setInt(1, result.getInt("id"));
+                    addNotificationCommand.setInt(2, result.getInt("tutor_id"));
+                    addNotificationCommand.setInt(3, result.getInt("tutee_id"));
+                    addNotificationCommand.setInt(4, 1);
+                    addNotificationCommand.execute();
+                    addNotificationCommand.setInt(2, result.getInt("tutee_id"));
+                    addNotificationCommand.setInt(3, result.getInt("tutor_id"));
+                    addNotificationCommand.setInt(4, 0);
+                    addNotificationCommand.execute();
+                }
+                synchronized (invalidateRequestCommand) {
+                    invalidateRequestCommand.setInt(1, result.getInt("tuee_id"));
+                    invalidateRequestCommand.setInt(2, result.getInt("course_id"));
+                    invalidateRequestCommand.setInt(3, result.getInt("id"));
+                    invalidateRequestCommand.execute();
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    void rejectRequest(Integer id) {
+        try {
+            ResultSet result;
+            synchronized (getRequestByIdQuery) {
+                getRequestByIdQuery.setInt(1, id);
+                result = getRequestByIdQuery.executeQuery();
+            }
+            if (result.next()) {
+                int status = result.getInt("req_status");
+                if (status == 0) {
+                    synchronized (decideRequestCommand) {
+                        decideRequestCommand.setInt(1, 2);
+                        decideRequestCommand.setInt(2, id);
+                        decideRequestCommand.execute();
+                    }
+                    synchronized (addNotificationCommand) {
+                        addNotificationCommand.setInt(1, id);
+                        addNotificationCommand.setInt(2, result.getInt("tutor_id"));
+                        addNotificationCommand.setInt(3, result.getInt("tutee_id"));
+                        addNotificationCommand.setInt(4, 1);
+                        addNotificationCommand.execute();
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // TODO: change to see if request valid
+    List<Integer> getAcceptedRequestIds(Integer id) {
+        List<Integer> requests = new LinkedList<>();
+        try {
+            ResultSet result;
+            synchronized (acceptedRequestsForCourseQuery) {
+                acceptedRequestsForCourseQuery.setInt(1, id);
+                result = acceptedRequestsForCourseQuery.executeQuery();
+            }
+            while (result.next()) {
+                requests.add(result.getInt(1));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return requests;
+    }
+
+    Map<String, Object> getRequestById(Integer id) {
+        Map<String, Object> request = null;
+        try {
+            ResultSet result;
+            synchronized (getRequestByIdQuery) {
+                getRequestByIdQuery.setInt(1, id);
+                result = getRequestQuery.executeQuery();
+            }
+            result.next();
+            request = new HashMap<>();
+            request.put("tutee_id", result.getInt("tutee_id"));
+            request.put("tutor_id", result.getInt("tutor_id"));
+            request.put("req_status", result.getInt("req_status"));
+            request.put("course_id", result.getInt("course_id"));
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return request;
+    }
+
+    int addRequest(Integer tutee, Integer tutor, String course, List<Integer> overlap) {
+        try {
+            ResultSet result;
+            int reqId;
+            synchronized (getRequestQuery) {
+                getRequestQuery.setInt(1, tutor);
+                getRequestQuery.setInt(2, tutee);
+                getRequestQuery.setString(3, course);
+                result = getRequestQuery.executeQuery();
+                if (result.next()) {
+                    return 0; // already made request
+                }
+                synchronized (addRequestCommand) {
+                    addRequestCommand.setInt(1, tutor);
+                    addRequestCommand.setInt(2, tutee);
+                    addRequestCommand.setString(3, course);
+                    addRequestCommand.execute();
+                }
+                result = getRequestQuery.executeQuery();
+                if (result.next()) {
+                    reqId = result.getInt("id");
+                } else {
+                    return -1;
+                }
+            }
+            synchronized (addRequestOverlapCommand) {
+                addRequestOverlapCommand.setInt(1, reqId);
+                for (Integer slot: overlap) {
+                    addRequestOverlapCommand.setInt(2, slot);
+                    addRequestOverlapCommand.execute();
+                }
+            }
+            synchronized (addNotificationCommand) {
+                addNotificationCommand.setInt(1, reqId);
+                addNotificationCommand.setInt(2, tutee);
+                addNotificationCommand.setInt(3, tutor);
+                addNotificationCommand.setInt(4, 0);
+                addNotificationCommand.execute();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return -1;
+        }
+        return 1;
+    }
+    
+    List<UserProfile> getTutors(Integer id) {
+        List<UserProfile> tutors = new LinkedList<>();
+        try {
+            ResultSet result;
+            synchronized (getTutorIdsQuery) {
+                getTutorIdsQuery.setInt(1, id);
+                result = getTutorIdsQuery.executeQuery();
+            }
+            while (result.next()) {
+                tutors.add(findUserById(result.getInt(1)));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return tutors;
+    }
+
+    List<Map<String, Object>> getNotifications(Integer id) {
+        List<Map<String, Object>> notifications = new LinkedList<>();
+        try {
+            ResultSet result;
+            synchronized (notificationsQuery) {
+                notificationsQuery.setInt(1, id);
+                result = notificationsQuery.executeQuery();
+                // TODO: optional, set pushed to true and the filter on n.pushed above
+            }
+            while (result.next()) {
+                Map<String, Object> notification = new HashMap<>();
+                notification.put("id", result.getInt(1));
+                notification.put("receiver_id", result.getInt(6));
+                int reqId = result.getInt(2);
+                int status = result.getInt(3);
+                int type = result.getInt(4);
+                int senderId = result.getInt(5);
+                notification.put("request_id", reqId);
+                notification.put("type", type);
+                notification.put("msg", "Empty Message");
+
+                synchronized (idQuery) {
+                    idQuery.setInt(1, senderId);
+                    result = idQuery.executeQuery();
+                }
+                result.next();
+                notification.put("sender_id", senderId);
+                notification.put("sender_name", result.getString("name"));
+
+                synchronized (requestOverlapQuery) {
+                    requestOverlapQuery.setInt(1, reqId);
+                    result = requestOverlapQuery.executeQuery();
+                }
+                List<Integer> overlap = new LinkedList<>();
+                while(result.next()) {
+                    overlap.add(result.getInt(1));
+                }
+                notification.put("overlap", overlap);
+                notifications.add(notification);
+            }
+        } catch(SQLException e) {
+            e.printStackTrace();
+        }
+        return notifications;
+    }
+
+    List<UserProfile> findTutors(String course, List<Integer> slots) {
         List<UserProfile> tutors = new LinkedList<>();
         try {
             ResultSet result;
@@ -65,7 +312,7 @@ public class UserDAO {
             sb.deleteCharAt(sb.length() - 1);
             sb.append(")");
             query.append(sb);
-            query.append(" AND c.course_id=\'").append(course).append("\'");
+            query.append(" AND c.course_number=\'").append(course).append("\'");
             query.append(" GROUP BY a.user_id ORDER BY overlap DESC");
             PreparedStatement st = MySQLConfig.getConnection().prepareStatement(query.toString());
             result = st.executeQuery();
@@ -88,7 +335,7 @@ public class UserDAO {
         return tutors;
     }
 
-    public Double getRating(int tutorId, int tuteeId) {
+    Double getRating(int tutorId, int tuteeId) {
         Double rating = null;
         try {
             ResultSet result;
@@ -106,7 +353,7 @@ public class UserDAO {
         return rating;
     }
 
-    public UserProfile findUserByCredentials(String email, String password) {
+    UserProfile findUserByCredentials(String email, String password) {
         UserProfile user = null;
         try {
             ResultSet res;
@@ -122,7 +369,7 @@ public class UserDAO {
         return user;
     }
 
-    public UserProfile findUserById(int id) {
+    UserProfile findUserById(int id) {
         UserProfile user = null;
         try {
             ResultSet res;
@@ -137,7 +384,7 @@ public class UserDAO {
         return user;
     }
 
-    public boolean validateUserToken(Integer idIn, String token) {
+    boolean validateUserToken(Integer idIn, String token) {
         boolean verified = false;
         try {
             synchronized (verifyTokenQuery) {
@@ -154,7 +401,7 @@ public class UserDAO {
         return verified;
     }
 
-    public String getToken(int id) {
+    String getToken(int id) {
         String token = UUID.randomUUID().toString();
         try {
             synchronized (addTokenCommand) {
@@ -177,7 +424,7 @@ public class UserDAO {
      * @param password
      * @return null if already exist
      */
-    public Integer registerUser(String email, String password) {
+    Integer registerUser(String email, String password) {
         Integer id = null;
         try {
             synchronized (registerCommand) {
@@ -198,7 +445,7 @@ public class UserDAO {
         return id;
     }
 
-    public Double getAvgRating(int id) {
+    Double getAvgRating(int id) {
         synchronized (avgRatingQuery) {
             try {
                 avgRatingQuery.setInt(1, id);
@@ -226,7 +473,6 @@ public class UserDAO {
                 user.setId(rs.getInt("id"));
                 user.setName(rs.getString("name"));
                 user.setGrade(rs.getString("grade"));
-                user.setPicture_url(rs.getString("picture_url"));
                 user.setBio(rs.getString("bio"));
                 synchronized (availabilityQuery) {
                     availabilityQuery.setInt(1, user.getId());

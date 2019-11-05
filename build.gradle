@@ -26,7 +26,8 @@ repositories {
 }
 
 dependencies {
-    compile 'mysql:mysql-connector-java:5.1.34' // manuall added to tomcat, need to figure out the correct way
+    compile 'commons-io:commons-io:2.6'
+    compile 'mysql:mysql-connector-java:5.1.34' // manually added to tomcat, need to figure out the correct way
     compile 'org.springframework.boot:spring-boot-starter-data-rest'
     compile group: 'com.google.guava', name: 'guava', version: '11.0.2'
     providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
