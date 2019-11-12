@@ -1,15 +1,12 @@
 package edu.usc.csci310.team16.tutorsearcher.server;
 
-import org.apache.commons.io.IOUtils;
+import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.multipart.support.StandardMultipartHttpServletRequest;
-import sun.nio.ch.IOUtil;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.*;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.Lock;
@@ -51,29 +48,29 @@ public class UserOperations {
         return "Success";
     }
 
-    @GetMapping(value = "getProfileImage/{userId}",
-        produces = MediaType.IMAGE_JPEG_VALUE
-    )
-    public byte[] getImage(HttpServletRequest req, @PathVariable String userId) {
-        try {
-            File file = new File(home + profileImageDir + "/" + userId + "_upload");
-            InputStream in = new FileInputStream(file);
-            return IOUtils.toByteArray(in);
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-            File file = new File(home + profileImageDir + "/default");
-            try {
-                InputStream in = new FileInputStream(file);
-                return IOUtils.toByteArray(in);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-        }
-        return null;
-    }
+//    @GetMapping(value = "getProfileImage/{userId}",
+//        produces = MediaType.IMAGE_JPEG_VALUE
+//    )
+//    public byte[] getImage(HttpServletRequest req, @PathVariable String userId) {
+//        try {
+//            File file = new File(home + profileImageDir + "/" + userId + "_upload");
+//            InputStream in = new FileInputStream(file);
+//            return IOUtils.toByteArray(in);
+//        } catch (Exception e) {
+//            System.out.println(e.getMessage());
+//            File file = new File(home + profileImageDir + "/default");
+//            try {
+//                InputStream in = new FileInputStream(file);
+//                return IOUtils.toByteArray(in);
+//            } catch (Exception ex) {
+//                ex.printStackTrace();
+//            }
+//        }
+//        return null;
+//    }
 
     @PostMapping(value = "searchTutor")
-    public List<UserProfile> searchTutor(HttpServletRequest req, @RequestBody Map<String, Object> json) {
+    public List<UserProfileCPY> searchTutor(HttpServletRequest req, @RequestBody Map<String, Object> json) {
         String course = (String) json.get("class");
         List<Integer> slots = (List<Integer>) json.get("availability");
         return MySQLConfig.getDAO().findTutors(course, slots);
@@ -134,7 +131,7 @@ public class UserOperations {
     }
 
     @GetMapping(value = "getTutors")
-    public List<UserProfile> getTutors(HttpServletRequest req) {
+    public List<UserProfileCPY> getTutors(HttpServletRequest req) {
         String idStr = req.getHeader("user-id");
         if (idStr == null) {
             return null;

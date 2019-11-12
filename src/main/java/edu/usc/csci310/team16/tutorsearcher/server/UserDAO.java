@@ -1,6 +1,5 @@
 package edu.usc.csci310.team16.tutorsearcher.server;
 
-import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.*;
 import java.util.*;
@@ -252,8 +251,8 @@ class UserDAO {
         return 1;
     }
     
-    List<UserProfile> getTutors(Integer id) {
-        List<UserProfile> tutors = new LinkedList<>();
+    List<UserProfileCPY> getTutors(Integer id) {
+        List<UserProfileCPY> tutors = new LinkedList<>();
         try {
             ResultSet result;
             synchronized (getTutorIdsQuery) {
@@ -324,8 +323,8 @@ class UserDAO {
         return notifications;
     }
 
-    List<UserProfile> findTutors(String course, List<Integer> slots) {
-        List<UserProfile> tutors = new LinkedList<>();
+    List<UserProfileCPY> findTutors(String course, List<Integer> slots) {
+        List<UserProfileCPY> tutors = new LinkedList<>();
         try {
             ResultSet result;
             StringBuilder query = new StringBuilder();
@@ -350,7 +349,7 @@ class UserDAO {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        for (UserProfile tutor: tutors) {
+        for (UserProfileCPY tutor: tutors) {
             List<Integer> tutorSlots = tutor.getAvailability();
             List<Integer> overlap = new LinkedList<>();
             for (Integer slot: tutorSlots) {
@@ -381,8 +380,8 @@ class UserDAO {
         return rating;
     }
 
-    UserProfile findUserByCredentials(String email, String password) {
-        UserProfile user = null;
+    UserProfileCPY findUserByCredentials(String email, String password) {
+        UserProfileCPY user = null;
         try {
             ResultSet res;
             synchronized (credentialsQuery) {
@@ -397,8 +396,8 @@ class UserDAO {
         return user;
     }
 
-    UserProfile findUserById(int id) {
-        UserProfile user = null;
+    UserProfileCPY findUserById(int id) {
+        UserProfileCPY user = null;
         try {
             ResultSet res;
             synchronized (idQuery) {
@@ -493,11 +492,11 @@ class UserDAO {
         return null;
     }
 
-    private UserProfile populateFields(ResultSet rs) {
-        UserProfile user = null;
+    private UserProfileCPY populateFields(ResultSet rs) {
+        UserProfileCPY user = null;
         try {
             if (rs.next()) {
-                user = new UserProfile();
+                user = new UserProfileCPY();
                 user.setId(rs.getInt("id"));
                 user.setName(rs.getString("name"));
                 user.setGrade(rs.getString("grade"));

@@ -1,7 +1,8 @@
 package edu.usc.csci310.team16.tutorsearcher.server;
 
+import edu.usc.csci310.team16.tutorsearcher.server.dao.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletResponse;
@@ -11,6 +12,13 @@ import java.util.Map;
 @RestController
 @RequestMapping("/")
 public class Login {
+
+    private UserService service;
+
+    @Autowired
+    Login(UserService userService) {
+        this.service = userService;
+    }
 
     @GetMapping(value = "/")
     public String landing() {
@@ -47,7 +55,7 @@ public class Login {
     public Object login(HttpServletResponse res, @RequestBody Map<String, String> json) {
         String email = json.get("email");
         String password = json.get("password");
-        UserProfile user = MySQLConfig.getDAO().findUserByCredentials(email, password);
+        UserProfileCPY user = MySQLConfig.getDAO().findUserByCredentials(email, password);
         if (user == null) {
             return "{}";
         }
@@ -63,5 +71,10 @@ public class Login {
             return "{}";
         }
         return MySQLConfig.getDAO().findUserById(id);
+    }
+
+    @GetMapping(value = "test")
+    public String test() {
+        return service.findUserById(1).getName();
     }
 }

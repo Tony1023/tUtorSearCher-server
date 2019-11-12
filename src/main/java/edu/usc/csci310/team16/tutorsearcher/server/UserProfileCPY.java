@@ -1,10 +1,9 @@
 package edu.usc.csci310.team16.tutorsearcher.server;
 
-import javax.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class UserProfile {
+public class UserProfileCPY {
 
     private Integer id;
     private String picture_url;
@@ -19,13 +18,13 @@ public class UserProfile {
     private List<String> tutorClasses = new ArrayList<>(); //tutor (which can they teach)
     private Double rating;
 
-    private static UserProfile currentUser;
+    private static UserProfileCPY currentUser;
 
-    public static void setCurrentUser(UserProfile profile) {
+    public static void setCurrentUser(UserProfileCPY profile) {
         currentUser = profile;
     }
 
-    public static UserProfile getCurrentUser() {
+    public static UserProfileCPY getCurrentUser() {
         return currentUser;
     }
 
