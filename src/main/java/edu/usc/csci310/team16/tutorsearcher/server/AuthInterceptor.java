@@ -12,6 +12,7 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+
         return true;
         // TODO: bring these back
 //        String token = request.getHeader("access-token");

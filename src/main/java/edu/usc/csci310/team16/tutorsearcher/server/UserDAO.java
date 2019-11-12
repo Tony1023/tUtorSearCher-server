@@ -6,7 +6,6 @@ import java.sql.*;
 import java.util.*;
 import java.util.Date;
 
-@Transactional
 class UserDAO {
 
     private PreparedStatement credentialsQuery = null;
@@ -32,6 +31,14 @@ class UserDAO {
     private PreparedStatement decideRequestCommand = null;
     private PreparedStatement invalidateRequestCommand = null;
     private PreparedStatement updateRatingCommand = null;
+    private PreparedStatement updateUserProfileCommand = null;
+    private PreparedStatement deleteCourseCommand = null;
+    private PreparedStatement addCourseCommand = null;
+    private PreparedStatement deleteAvailabilityCommand = null;
+    private PreparedStatement addAvailabilityCommand = null;
+    private PreparedStatement deleteTutorClassCommand = null;
+    private PreparedStatement addTutorClassCommand = null;
+
     private final long validPeriod = 1 * 24 * 60 * 60 * 1000;
 
     UserDAO() {
@@ -62,10 +69,19 @@ class UserDAO {
             addNotificationCommand = connection.prepareStatement("INSERT INTO Notifications(req_id, sender_id, receiver_id, receiver_type) VALUES(?,?,?,?)");
             addRequestOverlapCommand = connection.prepareStatement("INSERT INTO RequestOverlap(req_id, slot_num) VALUES(?,?)");
             requestOverlapQuery = connection.prepareStatement("SELECT slot_num FROM RequestOverlap WHERE req_id=?");
-            acceptedRequestsForCourseQuery = connection.prepareStatement("SELECT id FROM Requests WHERE tutee_id=? AND req_status=1");
+            acceptedRequestsForCourseQuery = connection.prepareStatement("SELECT r.id FROM Requests r, Courses c " +
+                    "WHERE r.course_id=c.id AND tutee_id=? AND c.course_number=? AND req_status=1");
             decideRequestCommand = connection.prepareStatement("UPDATE Requests SET req_status=? WHERE id=?");
             invalidateRequestCommand = connection.prepareStatement("UPDATE Requests SET req_status=3 WHERE tutee_id=? AND course_id=? AND NOT id=?");
-            updateRatingCommand = connection.prepareStatement("INSERT INTO Ratings(tutor_id, tutee_id, rating) VALUES (?,?,?)");
+            updateRatingCommand = connection.prepareStatement("REPLACE INTO Ratings(tutor_id, tutee_id, rating) VALUES (?,?,?)");
+            updateUserProfileCommand = connection.prepareStatement("UPDATE Users SET name=?, grade=?, bio=? WHERE id=?");
+            deleteCourseCommand = connection.prepareStatement("DELETE FROM UserCourses WHERE user_id=?");
+            addCourseCommand = connection.prepareStatement("INSERT INTO UserCourses(user_id, course_id) " +
+                    "SELECT ?, c.id FROM Courses c WHERE c.course_number=?");
+            deleteTutorClassCommand = connection.prepareStatement("DELETE FROM CourseOffered WHERE user_id=?");
+            addTutorClassCommand = connection.prepareStatement("INSERT INTO CourseOffered(user_id, course_id) SELECT ?, c.id FROM Courses c WHERE c.course_number=?");
+            deleteAvailabilityCommand = connection.prepareStatement("DELETE FROM Availability WHERE user_id=?");
+            addAvailabilityCommand = connection.prepareStatement("INSERT INTO Availability(user_id, slot_num) VALUES(?,?)");
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -149,13 +165,13 @@ class UserDAO {
         }
     }
 
-    // TODO: change to see if request valid
-    List<Integer> getAcceptedRequestIds(Integer id) {
+    List<Integer> getAcceptedRequestIds(Integer id, String course) {
         List<Integer> requests = new LinkedList<>();
         try {
             ResultSet result;
             synchronized (acceptedRequestsForCourseQuery) {
                 acceptedRequestsForCourseQuery.setInt(1, id);
+                acceptedRequestsForCourseQuery.setString(2, course);
                 result = acceptedRequestsForCourseQuery.executeQuery();
             }
             while (result.next()) {
@@ -173,7 +189,7 @@ class UserDAO {
             ResultSet result;
             synchronized (getRequestByIdQuery) {
                 getRequestByIdQuery.setInt(1, id);
-                result = getRequestQuery.executeQuery();
+                result = getRequestByIdQuery.executeQuery();
             }
             result.next();
             request = new HashMap<>();
@@ -198,6 +214,9 @@ class UserDAO {
                 result = getRequestQuery.executeQuery();
                 if (result.next()) {
                     return 0; // already made request
+                }
+                if (!getAcceptedRequestIds(tutee, course).isEmpty()) {
+                    return -1;
                 }
                 synchronized (addRequestCommand) {
                     addRequestCommand.setInt(1, tutor);
@@ -269,7 +288,6 @@ class UserDAO {
                 int senderId = result.getInt(5);
                 notification.put("request_id", reqId);
                 notification.put("type", type);
-                notification.put("msg", "Empty Message");
 
                 synchronized (idQuery) {
                     idQuery.setInt(1, senderId);
@@ -278,16 +296,26 @@ class UserDAO {
                 result.next();
                 notification.put("sender_id", senderId);
                 notification.put("sender_name", result.getString("name"));
+                notification.put("request_status", status);
+                if (status == 1) {
+                    notification.put("msg", result.getString("email"));
+                } else {
+                    notification.put("msg", "");
+                }
 
                 synchronized (requestOverlapQuery) {
                     requestOverlapQuery.setInt(1, reqId);
                     result = requestOverlapQuery.executeQuery();
                 }
-                List<Integer> overlap = new LinkedList<>();
-                while(result.next()) {
-                    overlap.add(result.getInt(1));
+                List<String> overlap = new ArrayList<>();
+                for (int i = 0; i < 28 * 7; ++i) {
+                    overlap.add("0");
                 }
-                notification.put("overlap", overlap);
+                while(result.next()) {
+                    overlap.set(result.getInt(1), "1");
+                }
+                String overlapStr = String.join(",", overlap);
+                notification.put("overlap", overlapStr);
                 notifications.add(notification);
             }
         } catch(SQLException e) {
@@ -509,6 +537,55 @@ class UserDAO {
         return user;
     }
 
-
+    void updateUserProfile(Map<String, Object> user) {
+        Integer id = (Integer) user.get("id");
+        try {
+            synchronized (updateUserProfileCommand) {
+                updateUserProfileCommand.setString(1, (String) user.get("name"));
+                updateUserProfileCommand.setString(2, (String) user.get("grade"));
+                updateUserProfileCommand.setString(3, (String) user.get("bio"));
+                updateUserProfileCommand.setInt(4, id);
+                updateUserProfileCommand.execute();
+            }
+            synchronized (deleteCourseCommand) {
+                deleteCourseCommand.setInt(1, id);
+                deleteCourseCommand.execute();
+                List<String> courses = (List<String>) user.get("coursesTaken");
+                for (String course: courses) {
+                    synchronized (addCourseCommand) {
+                        addCourseCommand.setInt(1, id);
+                        addCourseCommand.setString(2, course);
+                        addCourseCommand.execute();
+                    }
+                }
+            }
+            synchronized (deleteTutorClassCommand) {
+                deleteTutorClassCommand.setInt(1, id);
+                deleteTutorClassCommand.execute();
+                List<String> courses = (List<String>) user.get("tutorClasses");
+                for (String course: courses) {
+                    synchronized (addTutorClassCommand) {
+                        addTutorClassCommand.setInt(1, id);
+                        addTutorClassCommand.setString(2, course);
+                        addTutorClassCommand.execute();
+                    }
+                }
+            }
+            synchronized (deleteAvailabilityCommand) {
+                deleteAvailabilityCommand.setInt(1, id);
+                deleteAvailabilityCommand.execute();
+                List<Integer> slots = (List<Integer>) user.get("availability");
+                for (Integer slot: slots) {
+                    synchronized (addAvailabilityCommand) {
+                        addAvailabilityCommand.setInt(1, id);
+                        addAvailabilityCommand.setInt(2, slot);
+                        addAvailabilityCommand.execute();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();;
+        }
+    }
 
 }

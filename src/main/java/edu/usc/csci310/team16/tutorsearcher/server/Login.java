@@ -12,8 +12,6 @@ import java.util.Map;
 @RequestMapping("/")
 public class Login {
 
-    private UserDAO dao = new UserDAO();
-
     @GetMapping(value = "/")
     public String landing() {
         return "Hello world";
@@ -33,14 +31,14 @@ public class Login {
             resBody.put("err", "Must be a usc email");
             return resBody;
         }
-        Integer id = dao.registerUser(email, password);
+        Integer id = MySQLConfig.getDAO().registerUser(email, password);
         if (id == null) { // handles email already registered
             resBody.put("err", "Email already registered");
             return resBody;
         }
         resBody.put("success", true);
         resBody.put("id", id);
-        String token = dao.getToken(id);
+        String token = MySQLConfig.getDAO().getToken(id);
         res.addHeader("access-token", token);
         return resBody;
     }
@@ -49,11 +47,11 @@ public class Login {
     public Object login(HttpServletResponse res, @RequestBody Map<String, String> json) {
         String email = json.get("email");
         String password = json.get("password");
-        UserProfile user = dao.findUserByCredentials(email, password);
+        UserProfile user = MySQLConfig.getDAO().findUserByCredentials(email, password);
         if (user == null) {
             return "{}";
         }
-        String token = dao.getToken(user.getId());
+        String token = MySQLConfig.getDAO().getToken(user.getId());
         res.addHeader("access-token", token);
         return user;
     }
@@ -61,9 +59,9 @@ public class Login {
     @PostMapping(value = "validateToken",
             consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public Object validate(@RequestParam(value="id") Integer id, @RequestParam(value="token") String token) {
-        if (!dao.validateUserToken(id, token)) {
+        if (!MySQLConfig.getDAO().validateUserToken(id, token)) {
             return "{}";
         }
-        return dao.findUserById(id);
+        return MySQLConfig.getDAO().findUserById(id);
     }
 }

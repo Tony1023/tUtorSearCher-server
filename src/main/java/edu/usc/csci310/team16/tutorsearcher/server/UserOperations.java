@@ -1,6 +1,5 @@
 package edu.usc.csci310.team16.tutorsearcher.server;
 
-import jdk.nashorn.internal.parser.JSONParser;
 import org.apache.commons.io.IOUtils;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -20,8 +19,6 @@ import java.util.concurrent.locks.ReentrantLock;
 @RestController
 @RequestMapping("/user")
 public class UserOperations {
-
-    private UserDAO dao = new UserDAO();
 
     public static final String home = System.getProperty("catalina.home");
     public static final String profileImageDir = "/disk/tutorsearcher/images";
@@ -49,9 +46,9 @@ public class UserOperations {
     }
 
     @PostMapping(value = "updateProfile")
-    public String updateProfile(@RequestBody Map<String, String> json) {
-
-        return "placeholder";
+    public String updateProfile(@RequestBody Map<String, Object> json) {
+        MySQLConfig.getDAO().updateUserProfile(json);
+        return "Success";
     }
 
     @GetMapping(value = "getProfileImage/{userId}",
@@ -79,7 +76,7 @@ public class UserOperations {
     public List<UserProfile> searchTutor(HttpServletRequest req, @RequestBody Map<String, Object> json) {
         String course = (String) json.get("class");
         List<Integer> slots = (List<Integer>) json.get("availability");
-        return dao.findTutors(course, slots);
+        return MySQLConfig.getDAO().findTutors(course, slots);
     }
 
     @GetMapping(value = "getNotifications")
@@ -89,7 +86,7 @@ public class UserOperations {
             return null;
         }
         Integer id = Integer.valueOf(idStr);
-        return dao.getNotifications(id);
+        return MySQLConfig.getDAO().getNotifications(id);
     }
 
     @PostMapping(value = "sendRequest")
@@ -98,11 +95,13 @@ public class UserOperations {
         Integer tutor = (Integer) json.get("tutor_id");
         String course = (String) json.get("course");
         List<Integer> overlap = (List<Integer>) json.get("availability");
-        int res = dao.addRequest(tutee, tutor, course, overlap);
+        int res = MySQLConfig.getDAO().addRequest(tutee, tutor, course, overlap);
         if (res == 1) {
             return "Success";
         } else if (res == 0) {
             return "Cannot request the same tutor twice";
+        } else if (res == -1) {
+            return "Cannot request for the same course twice";
         } else {
             return "Failure";
         }
@@ -112,11 +111,11 @@ public class UserOperations {
     public String acceptRequest(HttpServletRequest req, @RequestBody Integer requestId) {
         try {
             lock.lock();
-            Map<String, Object> request = dao.getRequestById(requestId);
+            Map<String, Object> request = MySQLConfig.getDAO().getRequestById(requestId);
             if ((Integer) request.get("req_status") == 3) {
                 return "Tutee taken";
             }
-            dao.acceptRequest(requestId);
+            MySQLConfig.getDAO().acceptRequest(requestId);
         } finally {
             lock.unlock();
         }
@@ -125,8 +124,13 @@ public class UserOperations {
 
     @PostMapping(value = "rejectRequest")
     public String rejectRequest(HttpServletRequest req, @RequestBody Integer requestId) {
-        dao.rejectRequest(requestId);
-        return "Success";
+        Map<String, Object> request = MySQLConfig.getDAO().getRequestById(requestId);
+        if ((Integer) request.get("req_status") == 0) {
+            MySQLConfig.getDAO().rejectRequest(requestId);
+            return "Success";
+        } else {
+            return "Request already resolved";
+        }
     }
 
     @GetMapping(value = "getTutors")
@@ -136,20 +140,20 @@ public class UserOperations {
             return null;
         }
         Integer id = Integer.valueOf(idStr);
-        return dao.getTutors(id);
+        return MySQLConfig.getDAO().getTutors(id);
     }
 
     @PostMapping(value = "getRating",
             consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public Double getRating(@RequestParam(value="tutor_id") Integer tutorId, @RequestParam(value="tutee_id") Integer tuteeId) {
-        return dao.getRating(tutorId, tuteeId); // TODO: verify that returning null works
+        return MySQLConfig.getDAO().getRating(tutorId, tuteeId); // TODO: verify that returning null works
     }
 
     @PostMapping(value = "rateTutor",
             consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public String rateTutor(@RequestParam(value="tutor_id") Integer tutorId, @RequestParam(value="tutee_id") Integer tuteeId, @RequestParam(value="rating") Double rating) {
-        dao.updateRating(tutorId, tuteeId, rating);
-        return "success";
+        MySQLConfig.getDAO().updateRating(tutorId, tuteeId, rating);
+        return "Success";
     }
 
 

@@ -11,6 +11,20 @@ import java.sql.SQLException;
 
 public class MySQLConfig {
     private static Connection connection = null;
+    private final static long validPeriod = 1 * 24 * 60 * 60 * 1000;
+    private static long lastConnectionTime = 0;
+
+    private static UserDAO dao = null;
+    public static UserDAO getDAO() {
+        if (System.currentTimeMillis() - lastConnectionTime > validPeriod) {
+            dao = null;
+        }
+        if (dao == null) {
+            dao = new UserDAO();
+            lastConnectionTime = System.currentTimeMillis();
+        }
+        return dao;
+    }
 
     public static Connection getConnection() {
         try {
