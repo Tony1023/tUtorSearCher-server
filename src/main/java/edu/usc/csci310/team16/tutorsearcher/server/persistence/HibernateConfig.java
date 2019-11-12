@@ -16,7 +16,10 @@ import java.util.Properties;
 
 @Configuration
 @EnableTransactionManagement
-@PropertySource({"classpath:persistence-mysql.properties"})
+@PropertySource({
+        "classpath:persistence-mysql.properties",
+        "classpath:mysql-credentials.properties"
+})
 public class HibernateConfig {
 
     @Autowired

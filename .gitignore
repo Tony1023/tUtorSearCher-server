@@ -233,4 +233,4 @@ fabric.properties
 !/gradle/wrapper/gradle-wrapper.jar
 
 # End of https://www.gitignore.io/api/kotlin,android,androidstudio
-persistence-mysql.properties
+mysql-credentials.properties
