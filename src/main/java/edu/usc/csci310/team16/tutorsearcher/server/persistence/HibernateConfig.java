@@ -11,6 +11,10 @@ import org.springframework.orm.hibernate5.LocalSessionFactoryBean;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.Persistence;
+import javax.persistence.PersistenceContext;
 import javax.sql.DataSource;
 import java.util.Properties;
 
@@ -45,14 +49,7 @@ public class HibernateConfig {
         return dataSource;
     }
 
-    @Bean
-    public PlatformTransactionManager hibernateTransactionManager() {
-        final HibernateTransactionManager transactionManager = new HibernateTransactionManager();
-        transactionManager.setSessionFactory(sessionFactory().getObject());
-        return transactionManager;
-    }
-
-    private final Properties hibernateProperties() {
+    private Properties hibernateProperties() {
         final Properties hibernateProperties = new Properties();
         hibernateProperties.setProperty("hibernate.dialect", env.getProperty("hibernate.dialect"));
 

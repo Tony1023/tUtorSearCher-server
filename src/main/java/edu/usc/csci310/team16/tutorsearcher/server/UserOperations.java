@@ -1,6 +1,13 @@
 package edu.usc.csci310.team16.tutorsearcher.server;
 
-import org.apache.tomcat.util.http.fileupload.IOUtils;
+import edu.usc.csci310.team16.tutorsearcher.server.persistence.adapter.NotificationAdapter;
+import edu.usc.csci310.team16.tutorsearcher.server.persistence.adapter.UserProfile;
+import edu.usc.csci310.team16.tutorsearcher.server.persistence.model.Request;
+import edu.usc.csci310.team16.tutorsearcher.server.persistence.service.NotificationService;
+import edu.usc.csci310.team16.tutorsearcher.server.persistence.service.RatingService;
+import edu.usc.csci310.team16.tutorsearcher.server.persistence.service.RequestService;
+import edu.usc.csci310.team16.tutorsearcher.server.persistence.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -11,11 +18,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
 @SuppressWarnings("unchecked")
 @RestController
 @RequestMapping("/user")
 public class UserOperations {
+
+    @Autowired
+    private UserService userService;
+    @Autowired
+    private RequestService requestService;
+    @Autowired
+    private NotificationService notificationService;
+    @Autowired
+    private RatingService ratingService;
 
     public static final String home = System.getProperty("catalina.home");
     public static final String profileImageDir = "/disk/tutorsearcher/images";
@@ -43,37 +60,19 @@ public class UserOperations {
     }
 
     @PostMapping(value = "updateProfile")
-    public String updateProfile(@RequestBody Map<String, Object> json) {
-        MySQLConfig.getDAO().updateUserProfile(json);
+    public String updateProfile(@RequestBody UserProfile profile) {
+        userService.saveUser(profile);
         return "Success";
     }
 
-//    @GetMapping(value = "getProfileImage/{userId}",
-//        produces = MediaType.IMAGE_JPEG_VALUE
-//    )
-//    public byte[] getImage(HttpServletRequest req, @PathVariable String userId) {
-//        try {
-//            File file = new File(home + profileImageDir + "/" + userId + "_upload");
-//            InputStream in = new FileInputStream(file);
-//            return IOUtils.toByteArray(in);
-//        } catch (Exception e) {
-//            System.out.println(e.getMessage());
-//            File file = new File(home + profileImageDir + "/default");
-//            try {
-//                InputStream in = new FileInputStream(file);
-//                return IOUtils.toByteArray(in);
-//            } catch (Exception ex) {
-//                ex.printStackTrace();
-//            }
-//        }
-//        return null;
-//    }
-
     @PostMapping(value = "searchTutor")
-    public List<UserProfileCPY> searchTutor(HttpServletRequest req, @RequestBody Map<String, Object> json) {
+    public List<UserProfile> searchTutor(HttpServletRequest req, @RequestBody Map<String, Object> json) {
         String course = (String) json.get("class");
         List<Integer> slots = (List<Integer>) json.get("availability");
-        return MySQLConfig.getDAO().findTutors(course, slots);
+        return userService.searchTutors(course, slots)
+                .stream()
+                .map(UserProfile::new)
+                .collect(Collectors.toList());
     }
 
     @GetMapping(value = "getNotifications")
@@ -82,8 +81,11 @@ public class UserOperations {
         if (idStr == null) {
             return null;
         }
-        Integer id = Integer.valueOf(idStr);
-        return MySQLConfig.getDAO().getNotifications(id);
+        long id = Long.parseLong(idStr);
+        return notificationService.getNotifications(id)
+                .stream()
+                .map(NotificationAdapter::new)
+                .collect(Collectors.toList());
     }
 
     @PostMapping(value = "sendRequest")
@@ -92,10 +94,10 @@ public class UserOperations {
         Integer tutor = (Integer) json.get("tutor_id");
         String course = (String) json.get("course");
         List<Integer> overlap = (List<Integer>) json.get("availability");
-        int res = MySQLConfig.getDAO().addRequest(tutee, tutor, course, overlap);
-        if (res == 1) {
+        int res = requestService.addRequest(tutee, tutor, course, overlap);
+        if (res == 0) {
             return "Success";
-        } else if (res == 0) {
+        } else if (res == 1) {
             return "Cannot request the same tutor twice";
         } else if (res == -1) {
             return "Cannot request for the same course twice";
@@ -105,14 +107,14 @@ public class UserOperations {
     }
 
     @PostMapping(value = "acceptRequest")
-    public String acceptRequest(HttpServletRequest req, @RequestBody Integer requestId) {
+    public String acceptRequest(HttpServletRequest req, @RequestBody Long requestId) {
         try {
             lock.lock();
-            Map<String, Object> request = MySQLConfig.getDAO().getRequestById(requestId);
-            if ((Integer) request.get("req_status") == 3) {
+            Request request = requestService.findById(requestId);
+            if (request.getStatus() == 3) {
                 return "Tutee taken";
             }
-            MySQLConfig.getDAO().acceptRequest(requestId);
+            requestService.acceptRequest(request);
         } finally {
             lock.unlock();
         }
@@ -121,9 +123,9 @@ public class UserOperations {
 
     @PostMapping(value = "rejectRequest")
     public String rejectRequest(HttpServletRequest req, @RequestBody Integer requestId) {
-        Map<String, Object> request = MySQLConfig.getDAO().getRequestById(requestId);
-        if ((Integer) request.get("req_status") == 0) {
-            MySQLConfig.getDAO().rejectRequest(requestId);
+        Request request = requestService.findById(requestId);
+        if (request.getStatus() == 0) {
+            requestService.rejectRequest(request);
             return "Success";
         } else {
             return "Request already resolved";
@@ -131,28 +133,40 @@ public class UserOperations {
     }
 
     @GetMapping(value = "getTutors")
-    public List<UserProfileCPY> getTutors(HttpServletRequest req) {
+    public List<UserProfile> getTutors(HttpServletRequest req) {
         String idStr = req.getHeader("user-id");
         if (idStr == null) {
             return null;
         }
-        Integer id = Integer.valueOf(idStr);
-        return MySQLConfig.getDAO().getTutors(id);
+        long id = Long.parseLong(idStr);
+        return userService.getTutors(id)
+                .stream()
+                .map(UserProfile::new)
+                .collect(Collectors.toList());
     }
 
     @PostMapping(value = "getRating",
             consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public Double getRating(@RequestParam(value="tutor_id") Integer tutorId, @RequestParam(value="tutee_id") Integer tuteeId) {
-        return MySQLConfig.getDAO().getRating(tutorId, tuteeId); // TODO: verify that returning null works
+        return ratingService.getRating(tuteeId, tutorId); // TODO: verify that returning null works
     }
 
     @PostMapping(value = "rateTutor",
             consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public String rateTutor(@RequestParam(value="tutor_id") Integer tutorId, @RequestParam(value="tutee_id") Integer tuteeId, @RequestParam(value="rating") Double rating) {
-        MySQLConfig.getDAO().updateRating(tutorId, tuteeId, rating);
+        ratingService.updateRating(tuteeId, tutorId, rating);
         return "Success";
     }
 
 
+    @GetMapping(value = "getNotificationCount")
+    public Integer getNotificationCount(HttpServletRequest req) {
+        String idStr = req.getHeader("user-id");
+        if (idStr == null) {
+            return 0;
+        }
+        long id = Long.parseLong(idStr);
+        return notificationService.getUnpushedNotificationCount(id);
+    }
 
 }

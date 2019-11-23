@@ -1,6 +1,8 @@
 package edu.usc.csci310.team16.tutorsearcher.server;
 
 
+import edu.usc.csci310.team16.tutorsearcher.server.persistence.adapter.UserProfile;
+
 import java.sql.*;
 import java.util.*;
 import java.util.Date;
@@ -251,8 +253,8 @@ class UserDAO {
         return 1;
     }
     
-    List<UserProfileCPY> getTutors(Integer id) {
-        List<UserProfileCPY> tutors = new LinkedList<>();
+    List<UserProfile> getTutors(Integer id) {
+        List<UserProfile> tutors = new LinkedList<>();
         try {
             ResultSet result;
             synchronized (getTutorIdsQuery) {
@@ -323,8 +325,8 @@ class UserDAO {
         return notifications;
     }
 
-    List<UserProfileCPY> findTutors(String course, List<Integer> slots) {
-        List<UserProfileCPY> tutors = new LinkedList<>();
+    List<UserProfile> findTutors(String course, List<Integer> slots) {
+        List<UserProfile> tutors = new LinkedList<>();
         try {
             ResultSet result;
             StringBuilder query = new StringBuilder();
@@ -349,7 +351,7 @@ class UserDAO {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        for (UserProfileCPY tutor: tutors) {
+        for (UserProfile tutor: tutors) {
             List<Integer> tutorSlots = tutor.getAvailability();
             List<Integer> overlap = new LinkedList<>();
             for (Integer slot: tutorSlots) {
@@ -380,8 +382,8 @@ class UserDAO {
         return rating;
     }
 
-    UserProfileCPY findUserByCredentials(String email, String password) {
-        UserProfileCPY user = null;
+    UserProfile findUserByCredentials(String email, String password) {
+        UserProfile user = null;
         try {
             ResultSet res;
             synchronized (credentialsQuery) {
@@ -396,8 +398,8 @@ class UserDAO {
         return user;
     }
 
-    UserProfileCPY findUserById(int id) {
-        UserProfileCPY user = null;
+    UserProfile findUserById(int id) {
+        UserProfile user = null;
         try {
             ResultSet res;
             synchronized (idQuery) {
@@ -428,12 +430,12 @@ class UserDAO {
         return verified;
     }
 
-    String getToken(int id) {
+    String getToken(long id) {
         String token = UUID.randomUUID().toString();
         try {
             synchronized (addTokenCommand) {
                 Date now = new Date();
-                addTokenCommand.setInt(1, id);
+                addTokenCommand.setLong(1, id);
                 addTokenCommand.setString(2, token);
                 addTokenCommand.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
                 addTokenCommand.setTimestamp(4, new Timestamp(System.currentTimeMillis() + validPeriod));
@@ -472,10 +474,10 @@ class UserDAO {
         return id;
     }
 
-    Double getAvgRating(int id) {
+    Double getAvgRating(long id) {
         synchronized (avgRatingQuery) {
             try {
-                avgRatingQuery.setInt(1, id);
+                avgRatingQuery.setLong(1, id);
                 ResultSet result = avgRatingQuery.executeQuery();
                 if (result.next()) {
                     double rating = result.getDouble(1);
@@ -492,17 +494,17 @@ class UserDAO {
         return null;
     }
 
-    private UserProfileCPY populateFields(ResultSet rs) {
-        UserProfileCPY user = null;
+    private UserProfile populateFields(ResultSet rs) {
+        UserProfile user = null;
         try {
             if (rs.next()) {
-                user = new UserProfileCPY();
-                user.setId(rs.getInt("id"));
+                user = new UserProfile();
+                user.setId(rs.getLong("id"));
                 user.setName(rs.getString("name"));
                 user.setGrade(rs.getString("grade"));
                 user.setBio(rs.getString("bio"));
                 synchronized (availabilityQuery) {
-                    availabilityQuery.setInt(1, user.getId());
+                    availabilityQuery.setLong(1, user.getId());
                     ResultSet result = availabilityQuery.executeQuery();
                     List<Integer> slots = new LinkedList<>();
                     while (result.next()) {
@@ -511,7 +513,7 @@ class UserDAO {
                     user.setAvailability(slots);
                 }
                 synchronized (courseQuery) {
-                    courseQuery.setInt(1, user.getId());
+                    courseQuery.setLong(1, user.getId());
                     ResultSet result = courseQuery.executeQuery();
                     List<String> courses = new LinkedList<>();
                     while (result.next()) {
@@ -520,7 +522,7 @@ class UserDAO {
                     user.setCoursesTaken(courses);
                 }
                 synchronized (tutorClassQuery) {
-                    tutorClassQuery.setInt(1, user.getId());
+                    tutorClassQuery.setLong(1, user.getId());
                     ResultSet result = tutorClassQuery.executeQuery();
                     List<String> courses = new LinkedList<>();
                     while (result.next()) {

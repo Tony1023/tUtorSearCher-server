@@ -1,6 +1,12 @@
 package edu.usc.csci310.team16.tutorsearcher.server;
 
-import edu.usc.csci310.team16.tutorsearcher.server.dao.UserService;
+import edu.usc.csci310.team16.tutorsearcher.server.persistence.adapter.UserProfile;
+import edu.usc.csci310.team16.tutorsearcher.server.persistence.dao.CourseDAO;
+import edu.usc.csci310.team16.tutorsearcher.server.persistence.dao.RequestDAO;
+import edu.usc.csci310.team16.tutorsearcher.server.persistence.model.User;
+import edu.usc.csci310.team16.tutorsearcher.server.persistence.service.AuthTokenService;
+import edu.usc.csci310.team16.tutorsearcher.server.persistence.service.NotificationService;
+import edu.usc.csci310.team16.tutorsearcher.server.persistence.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -13,12 +19,10 @@ import java.util.Map;
 @RequestMapping("/")
 public class Login {
 
-    private UserService service;
-
     @Autowired
-    Login(UserService userService) {
-        this.service = userService;
-    }
+    private UserService userService;
+    @Autowired
+    private AuthTokenService authTokenService;
 
     @GetMapping(value = "/")
     public String landing() {
@@ -39,14 +43,19 @@ public class Login {
             resBody.put("err", "Must be a usc email");
             return resBody;
         }
-        Integer id = MySQLConfig.getDAO().registerUser(email, password);
+        Long id = null;
+        try {
+            id = userService.addUser(email, password);
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
         if (id == null) { // handles email already registered
             resBody.put("err", "Email already registered");
             return resBody;
         }
         resBody.put("success", true);
         resBody.put("id", id);
-        String token = MySQLConfig.getDAO().getToken(id);
+        String token = authTokenService.generateNewToken(id);
         res.addHeader("access-token", token);
         return resBody;
     }
@@ -55,26 +64,35 @@ public class Login {
     public Object login(HttpServletResponse res, @RequestBody Map<String, String> json) {
         String email = json.get("email");
         String password = json.get("password");
-        UserProfileCPY user = MySQLConfig.getDAO().findUserByCredentials(email, password);
+        User user = userService.findUserByCredentials(email, password);
         if (user == null) {
             return "{}";
         }
-        String token = MySQLConfig.getDAO().getToken(user.getId());
+        String token = authTokenService.generateNewToken(user.getId());
         res.addHeader("access-token", token);
-        return user;
+        return new UserProfile(user);
     }
 
     @PostMapping(value = "validateToken",
             consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public Object validate(@RequestParam(value="id") Integer id, @RequestParam(value="token") String token) {
-        if (!MySQLConfig.getDAO().validateUserToken(id, token)) {
+        if (!authTokenService.validateUserToken(id, token)) {
             return "{}";
         }
-        return MySQLConfig.getDAO().findUserById(id);
+        return new UserProfile(userService.findUserById(id));
     }
 
+    @Autowired
+    RequestDAO requestDAO;
+    @Autowired
+    CourseDAO courseDAO;
+    @Autowired
+    NotificationService notificationService;
+
     @GetMapping(value = "test")
-    public String test() {
-        return service.findUserById(1).getName();
+    public Object test(@RequestBody UserProfile profile) {
+        int count = notificationService.getUnpushedNotificationCount(profile.getId());
+
+        return null;
     }
 }
