@@ -52,7 +52,8 @@ public class HibernateConfig {
     private Properties hibernateProperties() {
         final Properties hibernateProperties = new Properties();
         hibernateProperties.setProperty("hibernate.dialect", env.getProperty("hibernate.dialect"));
-
+        hibernateProperties.setProperty("connection.autoReconnect", env.getProperty("connection.autoReconnect"));
+        hibernateProperties.setProperty("connection.is-connection-validation-required", env.getProperty("connection.is-connection-validation-required"));
         return hibernateProperties;
     }
 }

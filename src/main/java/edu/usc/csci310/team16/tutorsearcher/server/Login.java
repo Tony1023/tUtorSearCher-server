@@ -23,6 +23,9 @@ public class Login {
     private UserService userService;
     @Autowired
     private AuthTokenService authTokenService;
+    @Autowired
+    private NotificationService notificationService;
+
 
     @GetMapping(value = "/")
     public String landing() {
@@ -81,13 +84,6 @@ public class Login {
         }
         return new UserProfile(userService.findUserById(id));
     }
-
-    @Autowired
-    RequestDAO requestDAO;
-    @Autowired
-    CourseDAO courseDAO;
-    @Autowired
-    NotificationService notificationService;
 
     @GetMapping(value = "test")
     public Object test(@RequestBody UserProfile profile) {
