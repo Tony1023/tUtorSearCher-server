@@ -113,6 +113,8 @@ public class UserOperations {
             Request request = requestService.findById(requestId);
             if (request.getStatus() == 3) {
                 return "Tutee taken";
+            } else if (request.getStatus() != 0) {
+                return "You already took care of this request";
             }
             requestService.acceptRequest(request);
         } finally {
