@@ -3,6 +3,7 @@ package edu.usc.csci310.team16.tutorsearcher.server.persistence.dao;
 import edu.usc.csci310.team16.tutorsearcher.server.persistence.model.*;
 import org.springframework.stereotype.Repository;
 
+import javax.persistence.NoResultException;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 import javax.persistence.criteria.CriteriaBuilder;
@@ -30,7 +31,7 @@ public class UserDAOImpl extends AbstractDAO implements UserDAO {
     }
 
     @Override
-    public User findByCredentials(String email, String password) {
+    public User findByCredentials(String email, String password) throws NoResultException {
         return em.createNamedQuery("findUserByCredentials", User.class)
                 .setParameter("email", email)
                 .setParameter("password", password)

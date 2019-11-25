@@ -9,7 +9,7 @@ import java.util.List;
 public class NotificationAdapter {
 
     public NotificationAdapter(Notification notification) {
-        id = notification.getId();
+        id = String.valueOf(notification.getId());
         receiver_id = notification.getReceiver().getId();
         sender_id = notification.getSender().getId();
         req_id = notification.getRequest().getId();
@@ -24,7 +24,7 @@ public class NotificationAdapter {
         for (RequestOverlap slot: notification.getRequest().getOverlap()) {
             overlapStr.set(slot.getSlot(), "1");
         }
-        overlap = String.join(",", overlapStr);
+        overlap = String.join("", overlapStr);
 
         if (req_status == 1) {
             msg = notification.getSender().getEmail();
@@ -33,7 +33,7 @@ public class NotificationAdapter {
         }
     }
 
-    private long id;
+    private String id;
     private long receiver_id;
     private long sender_id;
     private long req_id;
@@ -43,7 +43,7 @@ public class NotificationAdapter {
     private String msg;
     private String overlap;
 
-    public long getId() {
+    public String getId() {
         return id;
     }
 
