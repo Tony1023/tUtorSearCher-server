@@ -106,8 +106,9 @@ public class UserOperations {
         }
     }
 
-    @PostMapping(value = "acceptRequest")
-    public String acceptRequest(HttpServletRequest req, @RequestBody Long requestId) {
+    @PostMapping(value = "acceptRequest",
+            consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    public String acceptRequest(HttpServletRequest req, @RequestParam("id") Long requestId) {
         try {
             lock.lock();
             Request request = requestService.findById(requestId);
@@ -123,8 +124,9 @@ public class UserOperations {
         return "Success";
     }
 
-    @PostMapping(value = "rejectRequest")
-    public String rejectRequest(HttpServletRequest req, @RequestBody Integer requestId) {
+    @PostMapping(value = "rejectRequest",
+            consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    public String rejectRequest(HttpServletRequest req, @RequestParam("id") Long requestId) {
         Request request = requestService.findById(requestId);
         if (request.getStatus() == 0) {
             requestService.rejectRequest(request);
