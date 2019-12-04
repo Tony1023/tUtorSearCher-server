@@ -11,6 +11,6 @@ public interface UserService {
     User findUserByCredentials(String email, String password);
     void saveUser(UserProfile profile);
     long addUser(String email, String password);
-    List<User> searchTutors(String courseNumber, List<Integer> slots);
+    List<User> searchTutors(String courseNumber, List<Integer> slots, long searcherId);
     List<User> getTutors(long id);
 }

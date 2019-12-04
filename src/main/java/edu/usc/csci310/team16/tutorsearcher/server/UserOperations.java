@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.*;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.Lock;
@@ -67,9 +68,14 @@ public class UserOperations {
 
     @PostMapping(value = "searchTutor")
     public List<UserProfile> searchTutor(HttpServletRequest req, @RequestBody Map<String, Object> json) {
+        String idStr = req.getHeader("user-id");
+        if (idStr == null) {
+            return new ArrayList<>();
+        }
+        long id = Long.parseLong(idStr);
         String course = (String) json.get("class");
         List<Integer> slots = (List<Integer>) json.get("availability");
-        return userService.searchTutors(course, slots)
+        return userService.searchTutors(course, slots, id)
                 .stream()
                 .map(UserProfile::new)
                 .collect(Collectors.toList());

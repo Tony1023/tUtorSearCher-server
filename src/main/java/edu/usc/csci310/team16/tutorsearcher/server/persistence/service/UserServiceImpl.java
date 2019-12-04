@@ -65,9 +65,10 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<User> searchTutors(String courseNumber, List<Integer> slots) {
+    public List<User> searchTutors(String courseNumber, List<Integer> slots, long searcherId) {
         Course course = courseDAO.findByCourseNumber(courseNumber);
-        return userDAO.findTutors(course, slots);
+        User searcher = userDAO.findById(searcherId);
+        return userDAO.findTutors(course, slots, searcher);
     }
 
     @Override

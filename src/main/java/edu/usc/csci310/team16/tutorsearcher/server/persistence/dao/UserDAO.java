@@ -12,5 +12,5 @@ public interface UserDAO {
     long addUser(User user);
     User findById(long id);
     User findByCredentials(String email, String password) throws NoResultException;
-    List<User> findTutors (Course course, List<Integer> slots);
+    List<User> findTutors(Course course, List<Integer> slots, User searcher);
 }

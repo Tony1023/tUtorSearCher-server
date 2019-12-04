@@ -39,7 +39,7 @@ public class UserDAOImpl extends AbstractDAO implements UserDAO {
     }
 
     @Override
-    public List<User> findTutors(Course course, List<Integer> slots) {
+    public List<User> findTutors(Course course, List<Integer> slots, User searcher) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<User> query = cb.createQuery(User.class);
         Root<Course> course_ = query.from(Course.class);
@@ -53,7 +53,8 @@ public class UserDAOImpl extends AbstractDAO implements UserDAO {
                 cb.equal(availability_.get("user"), courseOffered_.get("user")),
                 cb.equal(course_.get("id"), courseOffered_.get("course")),
                 in,
-                cb.equal(course_.get("courseNumber"), course.getCourseNumber())
+                cb.equal(course_.get("courseNumber"), course.getCourseNumber()),
+                cb.notEqual(availability_.get("user"), searcher)
         ))
                 .groupBy(availability_.get("user"))
                 .orderBy(cb.desc(cb.count(availability_)));
