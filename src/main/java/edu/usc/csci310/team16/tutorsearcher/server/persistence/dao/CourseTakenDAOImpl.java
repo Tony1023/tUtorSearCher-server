@@ -2,6 +2,7 @@ package edu.usc.csci310.team16.tutorsearcher.server.persistence.dao;
 
 import edu.usc.csci310.team16.tutorsearcher.server.persistence.model.Course;
 import edu.usc.csci310.team16.tutorsearcher.server.persistence.model.CourseOffered;
+import edu.usc.csci310.team16.tutorsearcher.server.persistence.model.CourseTaken;
 import edu.usc.csci310.team16.tutorsearcher.server.persistence.model.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
@@ -18,10 +19,10 @@ public class CourseTakenDAOImpl extends AbstractDAO implements CourseTakenDAO {
 
     @Override
     public void removeCoursesForUser(long id) {
-        List<CourseOffered> courses = em.createNamedQuery("findCourseOfferedByUserId", CourseOffered.class)
+        List<CourseTaken> courses = em.createNamedQuery("findCourseTakenByUserId", CourseTaken.class)
                 .setParameter("id", id)
                 .getResultList();
-        for (CourseOffered course : courses) {
+        for (CourseTaken course : courses) {
             em.remove(course);
         }
     }
@@ -31,7 +32,7 @@ public class CourseTakenDAOImpl extends AbstractDAO implements CourseTakenDAO {
         User user = userDAO.findById(id);
         for (String courseNumber : courses) {
             Course course = courseDAO.findByCourseNumber(courseNumber);
-            em.persist(new CourseOffered(user, course));
+            em.persist(new CourseTaken(user, course));
         }
     }
 }

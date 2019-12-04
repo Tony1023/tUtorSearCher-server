@@ -17,7 +17,7 @@ public class CourseTakenServiceImpl implements CourseTakenService {
     private CourseTakenDAO courseTakenDAO;
 
     @Override
-    public void updateCourseOffered(long id, List<String> courses) {
+    public void updateCoursesTaken(long id, List<String> courses) {
         courseTakenDAO.removeCoursesForUser(id);
         courseTakenDAO.addCoursesForUser(id, courses);
     }

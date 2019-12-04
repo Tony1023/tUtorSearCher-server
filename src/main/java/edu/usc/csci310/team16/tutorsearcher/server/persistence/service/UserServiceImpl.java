@@ -55,7 +55,7 @@ public class UserServiceImpl implements UserService {
         userDAO.saveUser(user);
         availabilityService.updateAvailability(profile.getId(), profile.getAvailability());
         courseOfferedService.updateCourseOffered(profile.getId(), profile.getTutorClasses());
-        courseTakenService.updateCourseOffered(profile.getId(), profile.getCoursesTaken());
+        courseTakenService.updateCoursesTaken(profile.getId(), profile.getCoursesTaken());
     }
 
     @Override
