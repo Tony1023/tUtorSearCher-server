@@ -77,7 +77,7 @@ public class UserOperations {
         List<Integer> slots = (List<Integer>) json.get("availability");
         return userService.searchTutors(course, slots, id)
                 .stream()
-                .map(UserProfile::new)
+                .map(user -> new UserProfile(user).intersectAvailability(slots))
                 .collect(Collectors.toList());
     }
 

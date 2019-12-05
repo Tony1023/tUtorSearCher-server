@@ -1,6 +1,7 @@
 package edu.usc.csci310.team16.tutorsearcher.server.persistence.model;
 
 import org.hibernate.annotations.Formula;
+import org.hibernate.annotations.Where;
 import org.hibernate.validator.constraints.UniqueElements;
 
 import javax.persistence.*;
@@ -59,6 +60,11 @@ public class User {
     @Formula("(SELECT avg(ifnull(r.rating, -1)) FROM Ratings r WHERE r.tutor_id = id)")
     private Double rating;
 
+    @OneToMany
+    @JoinColumn(name = "tutor_id")
+    @Where(clause = "req_status = 1")
+    private List<Request> acceptedRequests;
+
     public long getId() {
         return id;
     }
@@ -105,5 +111,9 @@ public class User {
 
     public void setBio(String bio) {
         this.bio = bio;
+    }
+
+    public List<Request> getAcceptedRequestsAsTutor() {
+        return acceptedRequests;
     }
 }

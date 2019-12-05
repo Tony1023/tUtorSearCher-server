@@ -1,10 +1,14 @@
 package edu.usc.csci310.team16.tutorsearcher.server.persistence.adapter;
 
 import edu.usc.csci310.team16.tutorsearcher.server.persistence.model.Availability;
+import edu.usc.csci310.team16.tutorsearcher.server.persistence.model.Request;
+import edu.usc.csci310.team16.tutorsearcher.server.persistence.model.RequestOverlap;
 import edu.usc.csci310.team16.tutorsearcher.server.persistence.model.User;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class UserProfile {
@@ -18,6 +22,7 @@ public class UserProfile {
     private List<Integer> availability;
     private List<String> coursesTaken; //tutor
     private List<String> tutorClasses; //tutor (which can they teach)
+    private Set<Integer> disabledSlots;
 
     public UserProfile() { }
 
@@ -37,6 +42,13 @@ public class UserProfile {
         tutorClasses = user.getTutorClasses().stream()
                 .map(tc -> tc.getCourse().getCourseNumber())
                 .collect(Collectors.toList());
+        disabledSlots = new HashSet<>();
+        for (Request request: user.getAcceptedRequestsAsTutor()) {
+            disabledSlots.addAll(request.getOverlap().stream()
+                    .map(RequestOverlap::getSlot)
+                    .collect(Collectors.toSet())
+            );
+        }
     }
 
     public Long getId() {
@@ -109,5 +121,20 @@ public class UserProfile {
 
     public void setTutorClasses(List<String> tutorClasses) {
         this.tutorClasses = tutorClasses;
+    }
+
+    public Set<Integer> getDisabledSlots() {
+        return disabledSlots;
+    }
+
+    public UserProfile intersectAvailability(List<Integer> slots) {
+        List<Integer> overlap = new ArrayList<>();
+        for (Integer slot: slots) {
+            if (availability.contains(slot)) {
+                overlap.add(slot);
+            }
+        }
+        availability = overlap;
+        return this;
     }
 }
