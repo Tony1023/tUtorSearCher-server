@@ -1,15 +1,13 @@
 package edu.usc.csci310.team16.tutorsearcher.server.persistence.service;
 
 import edu.usc.csci310.team16.tutorsearcher.server.persistence.dao.*;
-import edu.usc.csci310.team16.tutorsearcher.server.persistence.model.Course;
-import edu.usc.csci310.team16.tutorsearcher.server.persistence.model.Notification;
-import edu.usc.csci310.team16.tutorsearcher.server.persistence.model.Request;
-import edu.usc.csci310.team16.tutorsearcher.server.persistence.model.User;
+import edu.usc.csci310.team16.tutorsearcher.server.persistence.model.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -25,6 +23,8 @@ public class RequestServiceImpl implements RequestService {
     private NotificationDAO notificationDAO;
     @Autowired
     private RequestOverlapDAO requestOverlapDAO;
+    @Autowired
+    private AvailabilityDAO availabilityDAO;
 
     @Override
     public int addRequest(long tuteeId, long tutorId, String courseNumber, List<Integer> overlap) {
@@ -59,6 +59,7 @@ public class RequestServiceImpl implements RequestService {
         }
         notificationDAO.addNotification(request, request.getTutor(), request.getTutee(), 1);
         notificationDAO.addNotification(request, request.getTutee(), request.getTutor(), 0);
+        availabilityDAO.removeSlots(request.getTutor(), request.getOverlap().stream().map(RequestOverlap::getSlot).collect(Collectors.toList()));
     }
 
     @Override

@@ -6,6 +6,7 @@ import edu.usc.csci310.team16.tutorsearcher.server.persistence.dao.RequestDAO;
 import edu.usc.csci310.team16.tutorsearcher.server.persistence.dao.UserDAO;
 import edu.usc.csci310.team16.tutorsearcher.server.persistence.model.Course;
 import edu.usc.csci310.team16.tutorsearcher.server.persistence.model.Request;
+import edu.usc.csci310.team16.tutorsearcher.server.persistence.model.RequestOverlap;
 import edu.usc.csci310.team16.tutorsearcher.server.persistence.model.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -52,8 +53,16 @@ public class UserServiceImpl implements UserService {
         user.setName(profile.getName());
         user.setGrade(profile.getGrade());
         user.setBio(profile.getBio());
+        List<Integer> availability = profile.getAvailability();
         userDAO.saveUser(user);
-        availabilityService.updateAvailability(profile.getId(), profile.getAvailability());
+        for (Request request: user.getAcceptedRequestsAsTutor()) {
+            for (RequestOverlap overlap: request.getOverlap()) {
+                if (availability.contains(overlap.getSlot())) {
+                    availability.remove(overlap.getSlot());
+                }
+            }
+        }
+        availabilityService.updateAvailability(profile.getId(), availability);
         courseOfferedService.updateCourseOffered(profile.getId(), profile.getTutorClasses());
         courseTakenService.updateCoursesTaken(profile.getId(), profile.getCoursesTaken());
     }

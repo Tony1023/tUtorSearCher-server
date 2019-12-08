@@ -24,6 +24,19 @@ public class AvailabilityDAOImpl extends AbstractDAO implements AvailabilityDAO 
     }
 
     @Override
+    public void removeSlots(User user, List<Integer> slots) {
+        for (Integer slot: slots) {
+            List<Availability> availability = em.createNamedQuery("getAvailabilityByUserAndSlot", Availability.class)
+                    .setParameter("id", user.getId())
+                    .setParameter("slot", slot)
+                    .getResultList();
+            if (!availability.isEmpty()) {
+                em.remove(availability.get(0));
+            }
+        }
+    }
+
+    @Override
     public void addSlotsForUser(long id, List<Integer> slots) {
         User user = userDAO.findById(id);
         for (Integer slot: slots) {

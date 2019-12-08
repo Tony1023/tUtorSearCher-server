@@ -5,12 +5,16 @@ import java.io.Serializable;
 
 @Entity
 @Table(name = "Availability")
-@NamedQueries(
+@NamedQueries({
         @NamedQuery(
                 name = "getAvailabilitiesById",
                 query = "FROM Availability WHERE user_id=:id"
+        ),
+        @NamedQuery(
+                name = "getAvailabilityByUserAndSlot",
+                query = "FROM Availability WHERE user_id=:id AND slot_num=:slot"
         )
-)
+})
 public class Availability implements Serializable {
 
     public Availability() { }
