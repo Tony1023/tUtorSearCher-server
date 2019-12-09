@@ -8,11 +8,11 @@ import java.util.List;
 @NamedQueries({
         @NamedQuery(
                 name = "getNotificationsByReceiver",
-                query = "FROM Notification WHERE receiver_id=:id"
+                query = "FROM Notification WHERE receiver_id=:id ORDER BY id DESC"
         ),
         @NamedQuery(
                 name = "getNotificationsByReceiverAndPushed",
-                query = "FROM Notification WHERE receiver_id=:id AND PUSHED=:pushed"
+                query = "FROM Notification WHERE receiver_id=:id AND PUSHED=:pushed ORDER BY id DESC"
         )
 })
 public class Notification {
