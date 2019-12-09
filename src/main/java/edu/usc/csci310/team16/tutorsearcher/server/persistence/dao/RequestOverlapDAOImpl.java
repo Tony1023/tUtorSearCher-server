@@ -16,4 +16,11 @@ public class RequestOverlapDAOImpl extends AbstractDAO implements RequestOverlap
             em.persist(new RequestOverlap(request, slot));
         }
     }
+
+    @Override
+    public void removeOverlaps(Request request) {
+        for (RequestOverlap overlap: request.getOverlap()) {
+            em.remove(overlap);
+        }
+    }
 }

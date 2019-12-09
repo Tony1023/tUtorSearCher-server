@@ -3,6 +3,7 @@ package edu.usc.csci310.team16.tutorsearcher.server;
 import edu.usc.csci310.team16.tutorsearcher.server.persistence.adapter.NotificationAdapter;
 import edu.usc.csci310.team16.tutorsearcher.server.persistence.adapter.UserProfile;
 import edu.usc.csci310.team16.tutorsearcher.server.persistence.model.Request;
+import edu.usc.csci310.team16.tutorsearcher.server.persistence.model.User;
 import edu.usc.csci310.team16.tutorsearcher.server.persistence.service.NotificationService;
 import edu.usc.csci310.team16.tutorsearcher.server.persistence.service.RatingService;
 import edu.usc.csci310.team16.tutorsearcher.server.persistence.service.RequestService;
@@ -15,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletRequest;
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.Lock;
@@ -114,20 +116,45 @@ public class UserOperations {
 
     @PostMapping(value = "acceptRequest",
             consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-    public String acceptRequest(HttpServletRequest req, @RequestParam("id") Long requestId) {
+    public Map<String, Object> acceptRequest(HttpServletRequest req, @RequestParam("id") Long requestId, @RequestParam("overlap") String overlapStr) {
+        boolean success = true;
+        String message = null;
+        List<Integer> overlap = new ArrayList<>();
+        if (overlapStr.isEmpty()) {
+            success = false;
+            message = "Empty overlap";
+        } else {
+            for (int i = 0; i < overlapStr.length(); ++i) {
+                if (overlapStr.charAt(i) == '1') {
+                    overlap.add(i);
+                }
+            }
+        }
+        UserProfile profile = null;
         try {
             lock.lock();
             Request request = requestService.findById(requestId);
             if (request.getStatus() == 3) {
-                return "Tutee taken";
+                success = false;
+                message = "Tutee taken";
             } else if (request.getStatus() != 0) {
-                return "You already took care of this request";
+                success = false;
+                message = "You already took care of this request";
+            } else if (success) {
+                requestService.acceptRequest(request, overlap);
+                profile = new UserProfile(request.getTutor());
             }
-            requestService.acceptRequest(request);
         } finally {
             lock.unlock();
         }
-        return "Success";
+        Map<String, Object> res = new HashMap<>();
+        res.put("success", success);
+        if (success) {
+            res.put("payload", profile);
+        } else {
+            res.put("payload", message);
+        }
+        return res;
     }
 
     @PostMapping(value = "rejectRequest",

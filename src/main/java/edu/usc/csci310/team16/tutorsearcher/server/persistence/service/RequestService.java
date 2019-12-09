@@ -7,6 +7,6 @@ import java.util.List;
 public interface RequestService {
     int addRequest(long tuteeId, long tutorId, String course, List<Integer> overlap);
     Request findById(long id);
-    void acceptRequest(Request request);
+    void acceptRequest(Request request, List<Integer> overlap);
     void rejectRequest(Request request);
 }

@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -13,6 +15,8 @@ import java.util.stream.Collectors;
 @Transactional
 public class RequestServiceImpl implements RequestService {
 
+    @PersistenceContext
+    private EntityManager em;
     @Autowired
     private RequestDAO requestDAO;
     @Autowired
@@ -51,7 +55,7 @@ public class RequestServiceImpl implements RequestService {
     }
 
     @Override
-    public void acceptRequest(Request request) {
+    public void acceptRequest(Request request, List<Integer> overlap) {
         requestDAO.updateRequestStatus(request, 1);
         List<Request> requests = requestDAO.findByTuteeAndCourse(request.getTutee(), request.getCourse(), 0);
         for (Request toInvalidate: requests) {
@@ -59,7 +63,11 @@ public class RequestServiceImpl implements RequestService {
         }
         notificationDAO.addNotification(request, request.getTutor(), request.getTutee(), 1);
         notificationDAO.addNotification(request, request.getTutee(), request.getTutor(), 0);
-        availabilityDAO.removeSlots(request.getTutor(), request.getOverlap().stream().map(RequestOverlap::getSlot).collect(Collectors.toList()));
+        requestOverlapDAO.removeOverlaps(request);
+        requestOverlapDAO.addOverlaps(request, overlap);
+        availabilityDAO.removeSlots(request.getTutor(), overlap);
+        em.flush();
+        em.refresh(request);
     }
 
     @Override

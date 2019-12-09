@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface RequestOverlapDAO {
     void addOverlaps(Request request, List<Integer> overlap);
+    void removeOverlaps(Request request);
 }
