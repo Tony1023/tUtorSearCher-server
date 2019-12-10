@@ -11,4 +11,5 @@ public interface NotificationDAO {
     List<Notification> getNotifications(long id, boolean pushed);
     void addNotification(Request request, User sender, User receiver, int type);
     void changedPushed(Notification notification, boolean pushed);
+    void removeNotificationsByRequest(Request request);
 }

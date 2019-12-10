@@ -37,4 +37,13 @@ public class NotificationDAOImpl extends AbstractDAO implements NotificationDAO 
         em.merge(notification);
     }
 
+    @Override
+    public void removeNotificationsByRequest(Request request) {
+        for (Notification notification: em.createNamedQuery("findNotificationsByRequest", Notification.class)
+                .setParameter("id", request.getId())
+                .getResultList()) {
+            em.remove(notification);
+        }
+    }
+
 }

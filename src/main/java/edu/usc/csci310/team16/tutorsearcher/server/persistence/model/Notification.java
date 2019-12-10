@@ -13,6 +13,10 @@ import java.util.List;
         @NamedQuery(
                 name = "getNotificationsByReceiverAndPushed",
                 query = "FROM Notification WHERE receiver_id=:id AND PUSHED=:pushed ORDER BY id DESC"
+        ),
+        @NamedQuery(
+                name = "findNotificationsByRequest",
+                query = "FROM Notification WHERE req_id=:id"
         )
 })
 public class Notification {

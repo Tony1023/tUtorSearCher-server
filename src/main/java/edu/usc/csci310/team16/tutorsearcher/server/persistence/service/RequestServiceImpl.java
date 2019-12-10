@@ -61,6 +61,7 @@ public class RequestServiceImpl implements RequestService {
         for (Request toInvalidate: requests) {
             requestDAO.updateRequestStatus(toInvalidate, 3);
         }
+        notificationDAO.removeNotificationsByRequest(request);
         notificationDAO.addNotification(request, request.getTutor(), request.getTutee(), 1);
         notificationDAO.addNotification(request, request.getTutee(), request.getTutor(), 0);
         requestOverlapDAO.removeOverlaps(request);
